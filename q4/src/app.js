@@ -128,3 +128,4 @@ function loadSession() {
         currentProfile = null;
     }
 }
+
