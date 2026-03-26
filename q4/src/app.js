@@ -20,9 +20,32 @@ let currentProfile = null;
 function loadProfile() {
 
     const text = document.getElementById("profileInput").value;
+    let parsedData;
 
-   
-    const profile = JSON.parse(text);
+    try {
+        parsedData = JSON.parse(text);
+
+    } catch (error) {
+        alert("Invalid file/parse");
+        return;
+    }
+
+    if (
+        !parsedData ||
+        typeof parsedData !== "object" ||
+        Array.isArray(parsedData) ||
+        typeof parsedData.username !== "string" ||
+        !Array.isArray(parsedData.notifications) ||
+        !parsedData.notifications.every((item) => typeof item === "string")
+    ) {
+        alert("Invalid Data! Redo it");
+        return;
+    }
+
+    const profile = {
+        username: parsedData.username,
+        notifications: parsedData.notifications
+    };
 
     currentProfile = profile;
 
@@ -37,17 +60,17 @@ function loadProfile() {
 function renderProfile(profile) {
 
     
-    document.getElementById("username").innerHTML = profile.username;
+    document.getElementById("username").textContent = profile.username;
 
     const list = document.getElementById("notifications");
-    list.innerHTML = "";
+    list.replaceChildren();
 
     for (let n of profile.notifications) {
 
         const li = document.createElement("li");
 
         
-        li.innerHTML = n;
+        li.textContent = n;
 
         list.appendChild(li);
     }
@@ -59,22 +82,49 @@ function renderProfile(profile) {
 -------------------------- */
 
 function saveSession() {
-    localStorage.setItem("profile", JSON.stringify(currentProfile));
+    if (!currentProfile) {
+        return;
+    }
 
-    alert("Session saved");
+    const safeProfile = {
+        username: String(currentProfile.username || ""),
+        notifications: Array.isArray(currentProfile.notifications)
+            ? currentProfile.notifications.filter((item) => typeof item === "string")
+            : []
+    };
+
+    localStorage.setItem("profile", JSON.stringify(safeProfile));
 }
 
 
 function loadSession() {
+    try {
+        const stored = localStorage.getItem("profile");
+        if (!stored) return;
 
-    const stored = localStorage.getItem("profile");
+        const parsed = JSON.parse(stored);
 
-    if (stored) {
+        if (
+            typeof parsed !== "object" ||
+            parsed === null ||
+            Array.isArray(parsed) ||
+            typeof parsed.username !== "string" ||
+            !Array.isArray(parsed.notifications) ||
+            !parsed.notifications.every((item) => typeof item === "string")
+        ) {
+            throw new Error("Invalid data");
+        }
 
-        const profile = JSON.parse(stored);
+        const validatedProfile = {
+            username: parsed.username,
+            notifications: parsed.notifications
+        };
 
-        currentProfile = profile;
+        currentProfile = validatedProfile;
+        renderProfile(validatedProfile);
 
-        renderProfile(profile);
+    } catch (error) {
+        localStorage.removeItem("profile");
+        currentProfile = null;
     }
 }
